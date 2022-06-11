@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LSEngine": {
+      "commandName": "Project",
+      "workingDirectory": "H:\\GitHub\\NPGR019-LSEngine\\LSEngine\\LSEngine"
+    }
+  }
+}
