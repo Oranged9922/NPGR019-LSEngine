@@ -2,12 +2,14 @@
 using System;
 namespace LSEngine
 {
-    internal class VertexArrayObject<TVertexType, TIndexType> : IDisposable
+    public class VertexArrayObject<TVertexType, TIndexType> : IDisposable
         where TVertexType : unmanaged
         where TIndexType : unmanaged
     {
         private uint _id;
         private GL _gl;
+        
+        public uint VertexCount { get; set; }
 
         public VertexArrayObject(GL gl, BufferObject<TVertexType> vbo, BufferObject<TIndexType> ebo)
         {

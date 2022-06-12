@@ -3,7 +3,7 @@ using Silk.NET.OpenGL;
 
 namespace LSEngine
 {
-    internal class BufferObject<TDataType> : IDisposable where TDataType : unmanaged
+    public class BufferObject<TDataType> : IDisposable where TDataType : unmanaged
     {
         private uint _id;
         private BufferTargetARB _bufferType;

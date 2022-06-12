@@ -14,7 +14,7 @@ namespace LSEngine
         public Vector3 Front { get; set; }
 
         public float AspectRatio { get; set; }
-        public float Fov { get; set; } = 45f;
+        public float Fov = 45f;
         public float Yaw { get; set; } = -90f;
         public float Pitch { get; set; } = 0f;
         public float Near { get; set; } = 0.1f;

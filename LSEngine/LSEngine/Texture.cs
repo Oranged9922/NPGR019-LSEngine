@@ -9,8 +9,9 @@ namespace LSEngine
     {
         private uint _id;
         private GL _gl;
+        public int texSlot;
 
-        public unsafe Texture(GL gl, string path)
+        public unsafe Texture(GL gl, string path, GLEnum clamp = GLEnum.ClampToEdge)
         {
             _gl = gl;
             _id = gl.GenTexture();
@@ -30,13 +31,13 @@ namespace LSEngine
                     }
                 });
             }
-            SetParameters();
+            SetParameters(clamp);
         }
 
-        private void SetParameters()
+        private void SetParameters(GLEnum clamp)
         {
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)GLEnum.ClampToEdge);
-            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)GLEnum.ClampToEdge);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)clamp);
+            _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)clamp);
             _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)GLEnum.Linear);
             _gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)GLEnum.Linear);
             _gl.GenerateMipmap(TextureTarget.Texture2D);
@@ -44,6 +45,7 @@ namespace LSEngine
 
         public void Bind(TextureUnit textureSlot = TextureUnit.Texture0)
         {
+            texSlot = textureSlot - TextureUnit.Texture0;
             _gl.ActiveTexture(textureSlot);
             _gl.BindTexture(TextureTarget.Texture2D, _id);  
         }

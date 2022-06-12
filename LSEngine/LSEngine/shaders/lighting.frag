@@ -14,6 +14,7 @@ struct Light {
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
+    vec3 color;
 };
 
 uniform Material material;
@@ -37,6 +38,6 @@ void main()
       vec3 specular = light.specular * (spec * texture(material.specular, fTexCoords).rgb);
 
       //The resulting colour should be the amount of ambient colour + the amount of additional colour provided by the diffuse of the lamp + the specular amount
-      vec3 result = ambient + diffuse + specular;
+      vec3 result = (ambient + diffuse + specular) * light.color;
       FragColor = vec4(result, 1.0);
 }
