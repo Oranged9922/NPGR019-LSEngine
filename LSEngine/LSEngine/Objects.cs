@@ -5,12 +5,16 @@ namespace LSEngine
 {
     public class Objects : IDisposable
     {
-
+        public Type Type;
         public VertexArrayObject<float, uint> vao;
         public uint VertexCount { get => vao.VertexCount; }
         public Vector3 Position = new(0.0f);
         public float Scale = 1.0f;
-        public Matrix4x4 ModelMatrix { get => Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateTranslation(Position); }
+        public float Yaw = 0.0f;
+        public float Pitch = 0.0f;
+        public float Roll = 0.0f;
+        public Vector3 YawPitchRoll { set { Yaw = value.X; Pitch = value.Y; Roll = value.Z; } }
+        public Matrix4x4 ModelMatrix { get => Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateFromYawPitchRoll(Yaw, Pitch, Roll)*  Matrix4x4.CreateTranslation(Position); }
         internal Material Material { get; set; }
 
         public void Dispose()
@@ -135,6 +139,7 @@ namespace LSEngine
 
     public class Cube : Objects
     {
+        public Type Type = typeof(Cube);
         public static Cube GetCube(GL gl)
         {
             Cube c = new Cube();
@@ -144,6 +149,7 @@ namespace LSEngine
     }
     public class Quad : Objects
     {
+        public Type Type = typeof(Quad);
         public static Quad GetQuad(GL gl)
         {
             Quad q = new Quad();
@@ -154,17 +160,18 @@ namespace LSEngine
 
         public class Light : Objects
     {
+        public Type Type = typeof(Light);
         public Vector3 DiffuseColor = new(0.5f);
         public Vector3 AmbientColor = new(0.1f);
         public float DiffuseIntensity;
         public float AmbientIntensity;
-        public LightType Type;
+        public LightType LightTypeEnum;
         public Vector3 direction;
         public Vector3 Direction { get => Vector3.Normalize(direction); set => direction = value; }
         public float ConeAngle;
         public float LinearAttenuation;
         public float QuadraticAttenuation;
-        
+        public float orthoWidth = 4.0f, orthoHeight = 4.0f, orthoNear = 0.1f, orthoFar = 1000.0f;
         public Vector3 Color = new(1.0f);
 
         public Light()
@@ -190,7 +197,7 @@ namespace LSEngine
         {
             Light l = new Light();
             l.Direction = -Vector3.UnitY;
-            l.Type = LightType.DirectionalCube;
+            l.LightTypeEnum = LightType.DirectionalCube;
             l.vao = UnitCube.GetVertexArrayObject(gl);
             return l;
         }
@@ -199,7 +206,7 @@ namespace LSEngine
         {
             Light l = new Light();
             l.Direction = Vector3.UnitX;
-            l.Type = LightType.SpotLightCube;
+            l.LightTypeEnum = LightType.SpotLightCube;
             l.ConeAngle = 15.0f;
             l.vao = UnitCube.GetVertexArrayObject(gl);
             return l;
@@ -208,7 +215,7 @@ namespace LSEngine
         private static Light GetPointLightCube(GL gl)
         {
             Light l = new Light();
-            l.Type = LightType.PointLightCube;
+            l.LightTypeEnum = LightType.PointLightCube;
             l.vao = UnitCube.GetVertexArrayObject(gl);
             return l;
         }
@@ -217,6 +224,12 @@ namespace LSEngine
         {
             vao.Bind();
         }
+
+        // perhaps swap matrices
+        internal Matrix4x4 GetLightSpaceMatrix(Vector2 ScreenSize, float near = 0.1f, float far = 1000.0f) => GetLightView() * GetLightProjection(ScreenSize, near, far);
+        private Matrix4x4 GetLightView() => Matrix4x4.CreateLookAt(Position, Position + Direction, Vector3.UnitY);
+
+        private Matrix4x4 GetLightProjection(Vector2 ScreenSize, float near, float far) =>Matrix4x4.CreateOrthographicOffCenter(-ScreenSize.X/2f, ScreenSize.X/2f, -ScreenSize.Y/2f, ScreenSize.Y/2, near, far);
     }
 }
 
