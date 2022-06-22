@@ -373,6 +373,12 @@ namespace LSEngine
                 gl.Viewport(0, 0, (uint)_windowWidth, (uint)_windowHeight);
                 Thread.Sleep(200);
             }
+
+            // objects update
+            foreach (var obj in objects)
+            {
+                obj.Update(dTime);
+            }
         }
 
         private static void OnLoad()
@@ -388,7 +394,7 @@ namespace LSEngine
             {
                 for (int j = 0; j < instancingBufferSize; j++)
                 {
-                    instancingOffsets[i * instancingBufferSize + j] = new Vector3(i-(instancingBufferSize/2), -5.0f, j-(instancingBufferSize/2));
+                    instancingOffsets[i * instancingBufferSize + j] = new Vector3(i-(instancingBufferSize/2), 0.0f, j-(instancingBufferSize/2));
                 }
             }
             instancingArray = new(gl, instancingOffsets, BufferTargetARB.ArrayBuffer);
@@ -460,7 +466,8 @@ namespace LSEngine
             objects.Add(Cube.GetCube(gl));
             objects[1].Material = materials[0];
             objects[1].Position = new Vector3(-1.9f, -0.9f, -2.5f);
-
+            objects[1].Update += (dTime) => objects[1].Roll += (float)dTime;
+                
             objects.Add(Cube.GetCube(gl));
             objects[2].Material = materials[0];
             objects[2].Position = new Vector3(-0.7f,-0.6f,0.6f);

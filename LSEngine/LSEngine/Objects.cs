@@ -14,12 +14,19 @@ namespace LSEngine
         public float Pitch = 0.0f;
         public float Roll = 0.0f;
         public Vector3 YawPitchRoll { set { Yaw = value.X; Pitch = value.Y; Roll = value.Z; } }
-        public Matrix4x4 ModelMatrix { get => Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateFromYawPitchRoll(Yaw, Pitch, Roll)*  Matrix4x4.CreateTranslation(Position); }
+
+        /// <summary>
+        /// kinda works, but doesn't really work
+        /// </summary>
+        public Matrix4x4 ModelMatrix { get => Matrix4x4.CreateScale(Scale) * Matrix4x4.CreateFromYawPitchRoll(Yaw, Pitch, Roll) * Matrix4x4.CreateTranslation(Position); }
         internal Material Material { get; set; }
 
         public void Dispose()
         {
         }
+
+        public Action<double> Update { get; set; } = (deltaTime) => { };
+
     }
     
     static class UnitCube
