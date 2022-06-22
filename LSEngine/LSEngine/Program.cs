@@ -27,16 +27,11 @@ namespace LSEngine
         private static List<Objects> objects;
         private static List<Light> lights;
         private static List<Material> materials;
-
-        private static Shader LightingShader;
-        private static Shader LampShader;
-        private static Shader AdvShader;
-        private static Shader InstancingShader;
-        private static Shader DepthShader;
-        private static Shader ShadowMapShader;
+        private static Dictionary<string,Shader> shaders;
 
         private static BufferObject<Vector3> instancingArray;
         private static Vector3[] instancingOffsets;
+        private static int instancingBufferSize = 200; // this is sqrt
         
         private static VertexArrayObject<float,uint> Quad2D;
             
@@ -108,8 +103,8 @@ namespace LSEngine
             {
                 item.Dispose();
             }
-            LightingShader.Dispose();
-            LampShader.Dispose();
+            shaders["LightingShader"].Dispose();
+            shaders["LampShader"].Dispose();
         }
 
         private unsafe static void OnRender(double delta)
@@ -165,199 +160,198 @@ namespace LSEngine
 
 
             #region Using Advanced lighting shader
-            //AdvShader.Use();
-            //foreach (var obj in objects)
-            //{
-            //    // vPosition, vNormal and vTexCoords are in VAOCube
-            //    obj.vao.Bind();
+            shaders["InstancingShader"].Use();
+            foreach (var obj in objects)
+            {
+                // vPosition, vNormal and vTexCoords are in VAOCube
+                obj.vao.Bind();
 
-            //    if (obj.Material.DiffuseMap != null)
-            //    {
-            //        obj.Material.DiffuseMap.Bind(TextureUnit.Texture0);
-            //    }
-            //    if (obj.Material.SpecularMap != null)
-            //    {
-            //        obj.Material.SpecularMap.Bind(TextureUnit.Texture1);
-            //    }
-            //    AdvShader.SetUniform("uModel", obj.ModelMatrix);
-            //    AdvShader.SetUniform("uView", camera.GetViewMatrix());
-            //    AdvShader.SetUniform("uProjection", camera.GetProjectionMatrix());
+                if (obj.Material.DiffuseMap != null)
+                {
+                    obj.Material.DiffuseMap.Bind(TextureUnit.Texture0);
+                }
+                if (obj.Material.SpecularMap != null)
+                {
+                    obj.Material.SpecularMap.Bind(TextureUnit.Texture1);
+                }
+                shaders["InstancingShader"].SetUniform("uModel", obj.ModelMatrix);
+                shaders["InstancingShader"].SetUniform("uView", camera.GetViewMatrix());
+                shaders["InstancingShader"].SetUniform("uProjection", camera.GetProjectionMatrix());
 
-            //    //AdvShader.SetUniform("vPos", camera.Position);
-            //    AdvShader.SetUniform("mainTexture", obj.Material.DiffuseMap.texSlot);
-            //    AdvShader.SetUniform("hasSpecularMap", obj.Material.SpecularMap == null ? 0 : 1);
-            //    AdvShader.SetUniform("mapSpecular", obj.Material.SpecularMap == null ? 1 : materials[0].SpecularMap.texSlot);
+                //InstancingShader.SetUniform("vPos", camera.Position);
+                shaders["InstancingShader"].SetUniform("mainTexture", obj.Material.DiffuseMap.texSlot);
+                shaders["InstancingShader"].SetUniform("hasSpecularMap", obj.Material.SpecularMap == null ? 0 : 1);
+                shaders["InstancingShader"].SetUniform("mapSpecular", obj.Material.SpecularMap == null ? 1 : materials[0].SpecularMap.texSlot);
+                shaders["InstancingShader"].SetUniform("view", camera.GetViewMatrix());
+                shaders["InstancingShader"].SetUniform("materialAmbient", obj.Material.AmbientCoefficient);
+                shaders["InstancingShader"].SetUniform("materialDiffuse", obj.Material.DiffuseCoefficient);
+                shaders["InstancingShader"].SetUniform("materialSpecular", obj.Material.SpecularCoefficient);
+                shaders["InstancingShader"].SetUniform("materialSpecExponent", obj.Material.SpecularExponent);
 
-            //    AdvShader.SetUniform("view", camera.GetViewMatrix());
+                // Lights
+                for (int j = 0; j < lights.Count; j++)
+                {
+                    shaders["InstancingShader"].SetUniform($"lights[{j}].position", lights[j].Position);
+                    shaders["InstancingShader"].SetUniform($"lights[{j}].color", lights[j].Color);
+                    shaders["InstancingShader"].SetUniform($"lights[{j}].ambientIntensity", lights[j].AmbientIntensity);
+                    shaders["InstancingShader"].SetUniform($"lights[{j}].diffuseIntensity", lights[j].DiffuseIntensity);
+                    shaders["InstancingShader"].SetUniform($"lights[{j}].type", (int)lights[j].LightTypeEnum);
+                    shaders["InstancingShader"].SetUniform($"lights[{j}].direction", lights[j].Direction);
+                    shaders["InstancingShader"].SetUniform($"lights[{j}].coneAngle", lights[j].ConeAngle);
+                    shaders["InstancingShader"].SetUniform($"lights[{j}].linearAttenuation", lights[j].LinearAttenuation);
+                    shaders["InstancingShader"].SetUniform($"lights[{j}].quadraticAttenuation", lights[j].QuadraticAttenuation);
+                    //AdvShader.SetUniform($"lights[{i}].radius", light.Radius);                    
+                }
+                if (obj.GetType() == typeof(Quad))
+                {
+                    gl.EnableVertexAttribArray(3);
+                    instancingArray.Bind();
+                    gl.VertexAttribPointer(3, 3, GLEnum.Float, false, 0, (void*)0);
+                    gl.VertexAttribDivisor(3, 1);
+                    gl.DrawArraysInstanced(PrimitiveType.Triangles, 0, obj.VertexCount, (uint)instancingBufferSize * (uint)instancingBufferSize);
+                }
+                else
+                {
+                    gl.DrawArrays(PrimitiveType.Triangles, 0, obj.VertexCount);
+                }
+            }
 
-            //    AdvShader.SetUniform("materialAmbient", obj.Material.AmbientCoefficient);
-            //    AdvShader.SetUniform("materialDiffuse", obj.Material.DiffuseCoefficient);
-            //    AdvShader.SetUniform("materialSpecular", obj.Material.SpecularCoefficient);
-            //    AdvShader.SetUniform("materialSpecExponent", obj.Material.SpecularExponent);
-
-            //    // Lights
-            //    for (int j = 0; j < lights.Count; j++)
-            //    {
-            //        AdvShader.SetUniform($"lights[{j}].position", lights[j].Position);
-            //        AdvShader.SetUniform($"lights[{j}].color", lights[j].Color);
-            //        AdvShader.SetUniform($"lights[{j}].ambientIntensity", lights[j].AmbientIntensity);
-            //        AdvShader.SetUniform($"lights[{j}].diffuseIntensity", lights[j].DiffuseIntensity);
-            //        AdvShader.SetUniform($"lights[{j}].type", (int)lights[j].LightTypeEnum);
-            //        AdvShader.SetUniform($"lights[{j}].direction", lights[j].Direction);
-            //        AdvShader.SetUniform($"lights[{j}].coneAngle", lights[j].ConeAngle);
-            //        AdvShader.SetUniform($"lights[{j}].linearAttenuation", lights[j].LinearAttenuation);
-            //        AdvShader.SetUniform($"lights[{j}].quadraticAttenuation", lights[j].QuadraticAttenuation);
-            //        //AdvShader.SetUniform($"lights[{i}].radius", light.Radius);                    
-            //    }
-            //    if (obj.GetType() == typeof(Quad))
-            //    {
-
-            //        gl.DrawArraysInstanced(PrimitiveType.Triangles, 0, obj.VertexCount, 100*100);
-            //    }
-            //    else
-            //    {
-            //        gl.DrawArrays(PrimitiveType.Triangles, 0, obj.VertexCount);
-            //    }
-            //}
-
-            // draw lights as cubes
-            //foreach (var light in lights)
-            //{
-            //    LampShader.Use();
-            //    LampShader.SetUniform("uModel", light.ModelMatrix);
-            //    LampShader.SetUniform("uView", camera.GetViewMatrix());
-            //    LampShader.SetUniform("uProjection", camera.GetProjectionMatrix());
-            //    LampShader.SetUniform("color", light.Color);
-            //    light.vao.Bind();
-            //    gl.DrawArrays(PrimitiveType.Triangles, 0, light.VertexCount);
-            //}
+            //draw lights as cubes
+            foreach (var light in lights)
+            {
+                shaders["LampShader"].Use();
+                shaders["LampShader"].SetUniform("uModel", light.ModelMatrix);
+                shaders["LampShader"].SetUniform("uView", camera.GetViewMatrix());
+                shaders["LampShader"].SetUniform("uProjection", camera.GetProjectionMatrix());
+                shaders["LampShader"].SetUniform("color", light.Color);
+                light.vao.Bind();
+                gl.DrawArrays(PrimitiveType.Triangles, 0, light.VertexCount);
+            }
             #endregion
 
             #region Using Instancing Shader  
-            // 1 render to depth map
-            if (lights.Count > 0)
-            {
-                DepthShader.Use();
-                foreach (var l in lights)
-                {
-                    
-                    gl.Viewport(0, 0, 1024, 1024);
-                    //gl.BindFramebuffer(FramebufferTarget.Framebuffer, l.shadowMap.depthMapFBO);
-                    gl.Clear(ClearBufferMask.DepthBufferBit);
-                    foreach (var obj in objects)
-                    {
-                        obj.vao.Bind();
-                        DepthShader.SetUniform("model", obj.ModelMatrix);
-                        DepthShader.SetUniform("lightSpaceMatrix", l.GetLightSpaceMatrix(new Vector2(_windowWidth,_windowHeight)));
-                        
-                        if(obj.Type == typeof(Quad)) 
-                        {
-                            gl.EnableVertexAttribArray(3);
-                            instancingArray.Bind();
-                            gl.VertexAttribPointer(3, 3, GLEnum.Float, false, 0, (void*)0);
-                            gl.VertexAttribDivisor(3, 1);
-                            gl.DrawArraysInstanced(PrimitiveType.Triangles, 0, obj.VertexCount, 100 * 100);
-                        }
-                        else
-                        {
-                            gl.DrawArrays(PrimitiveType.Triangles, 0, obj.VertexCount);
-                        }
-                    }
-                    
-                }
-            }
-            gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
-            gl.Viewport(window.Size);
-            gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            
+            //// 1 render to depth map
+            //if (lights.Count > 0)
+            //{
+            //    DepthShader.Use();
+            //    foreach (var l in lights)
+            //    {
+
+            //        gl.Viewport(0, 0, 1024, 1024);
+            //        //gl.BindFramebuffer(FramebufferTarget.Framebuffer, l.shadowMap.depthMapFBO);
+            //        gl.Clear(ClearBufferMask.DepthBufferBit);
+            //        foreach (var obj in objects)
+            //        {
+            //            obj.vao.Bind();
+            //            DepthShader.SetUniform("model", obj.ModelMatrix);
+            //            DepthShader.SetUniform("lightSpaceMatrix", l.GetLightSpaceMatrix(new Vector2(_windowWidth,_windowHeight)));
+
+            //            if(obj.Type == typeof(Quad)) 
+            //            {
+            //                gl.EnableVertexAttribArray(3);
+            //                instancingArray.Bind();
+            //                gl.VertexAttribPointer(3, 3, GLEnum.Float, false, 0, (void*)0);
+            //                gl.VertexAttribDivisor(3, 1);
+            //                gl.DrawArraysInstanced(PrimitiveType.Triangles, 0, obj.VertexCount, 100 * 100);
+            //            }
+            //            else
+            //            {
+            //                gl.DrawArrays(PrimitiveType.Triangles, 0, obj.VertexCount);
+            //            }
+            //        }
+
+            //    }
+            //}
+            //gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            //gl.Viewport(window.Size);
+            //gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
             // 2 render scene with shadow mapping
-            if (!shadowMapOnly)
-            {
-                InstancingShader.Use();
-                foreach (var obj in objects)
-                {
-                    // vPosition, vNormal and vTexCoords are in VAOCube
-                    obj.vao.Bind();
+            //if (!shadowMapOnly)
+            //{
+            //    shaders["InstancingShader"].Use();
+            //    foreach (var obj in objects)
+            //    {
+            //        // vPosition, vNormal and vTexCoords are in VAOCube
+            //        obj.vao.Bind();
 
-                    if (obj.Material.DiffuseMap != null)
-                    {
-                        obj.Material.DiffuseMap.Bind(TextureUnit.Texture0);
-                    }
-                    if (obj.Material.SpecularMap != null)
-                    {
-                        obj.Material.SpecularMap.Bind(TextureUnit.Texture1);
-                    }
-                    InstancingShader.SetUniform("uModel", obj.ModelMatrix);
-                    InstancingShader.SetUniform("uView", camera.GetViewMatrix());
-                    InstancingShader.SetUniform("uProjection", camera.GetProjectionMatrix());
+            //        if (obj.Material.DiffuseMap != null)
+            //        {
+            //            obj.Material.DiffuseMap.Bind(TextureUnit.Texture0);
+            //        }
+            //        if (obj.Material.SpecularMap != null)
+            //        {
+            //            obj.Material.SpecularMap.Bind(TextureUnit.Texture1);
+            //        }
+            //        shaders["InstancingShader"].SetUniform("uModel", obj.ModelMatrix);
+            //        shaders["InstancingShader"].SetUniform("uView", camera.GetViewMatrix());
+            //        shaders["InstancingShader"].SetUniform("uProjection", camera.GetProjectionMatrix());
 
-                    //InstancingShader.SetUniform("vPos", camera.Position);
-                    InstancingShader.SetUniform("mainTexture", obj.Material.DiffuseMap.texSlot);
-                    InstancingShader.SetUniform("hasSpecularMap", obj.Material.SpecularMap == null ? 0 : 1);
-                    InstancingShader.SetUniform("mapSpecular", obj.Material.SpecularMap == null ? 1 : materials[0].SpecularMap.texSlot);
+            //        //InstancingShader.SetUniform("vPos", camera.Position);
+            //        shaders["InstancingShader"].SetUniform("mainTexture", obj.Material.DiffuseMap.texSlot);
+            //        shaders["InstancingShader"].SetUniform("hasSpecularMap", obj.Material.SpecularMap == null ? 0 : 1);
+            //        shaders["InstancingShader"].SetUniform("mapSpecular", obj.Material.SpecularMap == null ? 1 : materials[0].SpecularMap.texSlot);
+            //        shaders["InstancingShader"].SetUniform("view", camera.GetViewMatrix());
+            //        shaders["InstancingShader"].SetUniform("materialAmbient", obj.Material.AmbientCoefficient);
+            //        shaders["InstancingShader"].SetUniform("materialDiffuse", obj.Material.DiffuseCoefficient);
+            //        shaders["InstancingShader"].SetUniform("materialSpecular", obj.Material.SpecularCoefficient);
+            //        shaders["InstancingShader"].SetUniform("materialSpecExponent", obj.Material.SpecularExponent);
 
-                    InstancingShader.SetUniform("view", camera.GetViewMatrix());
-
-                    InstancingShader.SetUniform("materialAmbient", obj.Material.AmbientCoefficient);
-                    InstancingShader.SetUniform("materialDiffuse", obj.Material.DiffuseCoefficient);
-                    InstancingShader.SetUniform("materialSpecular", obj.Material.SpecularCoefficient);
-                    InstancingShader.SetUniform("materialSpecExponent", obj.Material.SpecularExponent);
-
-                    // Lights
-                    for (int j = 0; j < lights.Count; j++)
-                    {
-                        InstancingShader.SetUniform($"lights[{j}].position", lights[j].Position);
-                        InstancingShader.SetUniform($"lights[{j}].color", lights[j].Color);
-                        InstancingShader.SetUniform($"lights[{j}].ambientIntensity", lights[j].AmbientIntensity);
-                        InstancingShader.SetUniform($"lights[{j}].diffuseIntensity", lights[j].DiffuseIntensity);
-                        InstancingShader.SetUniform($"lights[{j}].type", (int)lights[j].LightTypeEnum);
-                        InstancingShader.SetUniform($"lights[{j}].direction", lights[j].Direction);
-                        InstancingShader.SetUniform($"lights[{j}].coneAngle", lights[j].ConeAngle);
-                        InstancingShader.SetUniform($"lights[{j}].linearAttenuation", lights[j].LinearAttenuation);
-                        InstancingShader.SetUniform($"lights[{j}].quadraticAttenuation", lights[j].QuadraticAttenuation);
-                        //AdvShader.SetUniform($"lights[{i}].radius", light.Radius);                    
-                    }
+            //        // Lights
+            //        for (int j = 0; j < lights.Count; j++)
+            //        {
+            //            shaders["InstancingShader"].SetUniform($"lights[{j}].position", lights[j].Position);
+            //            shaders["InstancingShader"].SetUniform($"lights[{j}].color", lights[j].Color);
+            //            shaders["InstancingShader"].SetUniform($"lights[{j}].ambientIntensity", lights[j].AmbientIntensity);
+            //            shaders["InstancingShader"].SetUniform($"lights[{j}].diffuseIntensity", lights[j].DiffuseIntensity);
+            //            shaders["InstancingShader"].SetUniform($"lights[{j}].type", (int)lights[j].LightTypeEnum);
+            //            shaders["InstancingShader"].SetUniform($"lights[{j}].direction", lights[j].Direction);
+            //            shaders["InstancingShader"].SetUniform($"lights[{j}].coneAngle", lights[j].ConeAngle);
+            //            shaders["InstancingShader"].SetUniform($"lights[{j}].linearAttenuation", lights[j].LinearAttenuation);
+            //            shaders["InstancingShader"].SetUniform($"lights[{j}].quadraticAttenuation", lights[j].QuadraticAttenuation);
+            //            //AdvShader.SetUniform($"lights[{i}].radius", light.Radius);                    
+            //        }
 
 
-                    if (obj.GetType() == typeof(Quad))
-                    {
-                        // ground
-                        gl.EnableVertexAttribArray(3);
-                        instancingArray.Bind();
-                        gl.VertexAttribPointer(3, 3, GLEnum.Float, false, 0, (void*)0);
-                        gl.VertexAttribDivisor(3, 1);
-                        gl.DrawArraysInstanced(PrimitiveType.Triangles, 0, obj.VertexCount, 1000 * 1000);
-                    }
-                    else
-                    {
-                        gl.DrawArrays(PrimitiveType.Triangles, 0, obj.VertexCount);
-                    }
-                }
-                foreach (var light in lights)
-                {
-                    LightingShader.Use();
-                    LightingShader.SetUniform("light.ambient", light.AmbientColor);
-                    LightingShader.SetUniform("light.diffuse", light.DiffuseColor); // darkened
-                    LightingShader.SetUniform("light.specular", new Vector3(1.0f, 1.0f, 1.0f));
-                    LightingShader.SetUniform("light.position", light.Position);
-                    gl.DrawArrays(PrimitiveType.Triangles, 0, objects[0].VertexCount);
+            //        if (obj.GetType() == typeof(Quad))
+            //        {
+            //            // ground
+            //            gl.EnableVertexAttribArray(3);
+            //            instancingArray.Bind();
+            //            gl.VertexAttribPointer(3, 3, GLEnum.Float, false, 0, (void*)0);
+            //            gl.VertexAttribDivisor(3, 1);
+            //            gl.DrawArraysInstanced(PrimitiveType.Triangles, 0, obj.VertexCount, 1000 * 1000);
+            //        }
+            //        else
+            //        {
+            //            gl.DrawArrays(PrimitiveType.Triangles, 0, obj.VertexCount);
+            //        }
+            //    }
+            //    foreach (var light in lights)
+            //    {
+            //        shaders["LightingShader"].Use();
+            //        shaders["LightingShader"].SetUniform("light.ambient", light.AmbientColor);
+            //        shaders["LightingShader"].SetUniform("light.diffuse", light.DiffuseColor); // darkened
+            //        shaders["LightingShader"].SetUniform("light.specular", new Vector3(1.0f, 1.0f, 1.0f));
+            //        shaders["LightingShader"].SetUniform("light.position", light.Position);
+            //        gl.DrawArrays(PrimitiveType.Triangles, 0, objects[0].VertexCount);
 
-                    LampShader.Use();
-                    LampShader.SetUniform("color", light.Color);
-                    LampShader.SetUniform("uModel", light.ModelMatrix);
-                    LampShader.SetUniform("uView", camera.GetViewMatrix());
-                    LampShader.SetUniform("uProjection", camera.GetProjectionMatrix());
-                    light.vao.Bind();
-                    gl.DrawArrays(PrimitiveType.Triangles, 0, light.VertexCount);
-                }
-            }
-            else
-            {
-                ShadowMapShader.Use();
-                Quad2D.Bind();
-                gl.ActiveTexture(TextureUnit.Texture0);
-                gl.DrawArrays(PrimitiveType.Triangles, 0, Quad2D.VertexCount);
-            }
+            //        shaders["LampShader"].Use();
+            //        shaders["LampShader"].SetUniform("color", light.Color);
+            //        shaders["LampShader"].SetUniform("uModel", light.ModelMatrix);
+            //        shaders["LampShader"].SetUniform("uView", camera.GetViewMatrix());
+            //        shaders["LampShader"].SetUniform("uProjection", camera.GetProjectionMatrix());
+            //        light.vao.Bind();
+            //        gl.DrawArrays(PrimitiveType.Triangles, 0, light.VertexCount);
+            //    }
+            //}
+            //else
+            //{
+            //    shaders["ShadowMapShader"].Use();
+            //    Quad2D.Bind();
+            //    gl.ActiveTexture(TextureUnit.Texture0);
+            //    gl.DrawArrays(PrimitiveType.Triangles, 0, Quad2D.VertexCount);
+            //}
             
             #endregion
             #region imgui stuff
@@ -512,14 +506,15 @@ namespace LSEngine
             objects = new();
             lights = new();
             materials = new();
+            shaders = new();
             gl = GL.GetApi(window);
 
-            instancingOffsets = new Vector3[1000*1000];
-            for (int i = 0; i < 1000; i++)
+            instancingOffsets = new Vector3[instancingBufferSize*instancingBufferSize];
+            for (int i = 0; i < instancingBufferSize; i++)
             {
-                for (int j = 0; j < 1000; j++)
+                for (int j = 0; j < instancingBufferSize; j++)
                 {
-                    instancingOffsets[i * 1000 + j] = new Vector3(i-50, -5.0f, j-50);
+                    instancingOffsets[i * instancingBufferSize + j] = new Vector3(i-(instancingBufferSize/2), -5.0f, j-(instancingBufferSize/2));
                 }
             }
             instancingArray = new(gl, instancingOffsets, BufferTargetARB.ArrayBuffer);
@@ -551,12 +546,12 @@ namespace LSEngine
             gl.Viewport(0, 0, (uint)_windowWidth, (uint)_windowHeight);
 
             
-            LightingShader = new Shader(gl, "shaders/shader.vert", "shaders/lighting.frag");
-            LampShader = new Shader(gl, "shaders/shader.vert", "shaders/shader.frag");
-            AdvShader = new Shader(gl, "shaders/lighting_adv.vert", "shaders/lighting_adv.frag");
-            InstancingShader = new Shader(gl, "shaders/instancing_ground.vert", "shaders/instancing_ground.frag");
-            DepthShader = new Shader(gl, "shaders/depth_shader.vert", "shaders/depth_shader.frag");
-            ShadowMapShader = new Shader(gl, "shaders/shadow_map.vert", "shaders/shadow_map.frag");
+            shaders.Add("LightingShader", new Shader(gl, "shaders/shader.vert", "shaders/lighting.frag"));
+            shaders.Add("LampShader",  new Shader(gl, "shaders/shader.vert", "shaders/shader.frag"));
+            shaders.Add("AdvShader", new Shader(gl, "shaders/lighting_adv.vert", "shaders/lighting_adv.frag"));
+            shaders.Add("InstancingShader", new Shader(gl, "shaders/instancing_ground.vert", "shaders/instancing_ground.frag"));
+            shaders.Add("DepthShader", new Shader(gl, "shaders/depth_shader.vert", "shaders/depth_shader.frag"));
+            shaders.Add("ShadowMapShader", new Shader(gl, "shaders/shadow_map.vert", "shaders/shadow_map.frag"));
             materials.Add(new(
                 name : "bricks", 
                 diffuseMap : new Texture(gl, "textures/brickwall/spnza_bricks_a_diff.png"), 
@@ -576,30 +571,30 @@ namespace LSEngine
             materials[1].SpecularCoefficient = new(0.0f, 0.0f, 0.0f);
             materials[1].SpecularExponent = 32.0f;
 
-            Quad2D = new(gl, new(gl, Vertices, BufferTargetARB.ArrayBuffer), new(gl, Indices, BufferTargetARB.ElementArrayBuffer));
-            Quad2D.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, 5, 0);
-            Quad2D.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, 5, 3);
-            Quad2D.VertexCount = 6;
+            //Quad2D = new(gl, new(gl, Vertices, BufferTargetARB.ArrayBuffer), new(gl, Indices, BufferTargetARB.ElementArrayBuffer));
+            //Quad2D.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, 5, 0);
+            //Quad2D.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, 5, 3);
+            //Quad2D.VertexCount = 6;
             //// VAOCube
             ////
 
-            //// ground
-            //objects.Add(Quad.GetQuad(gl));
-            //objects[0].Material = materials[1];
+            // ground
+            objects.Add(Quad.GetQuad(gl));
+            objects[0].Material = materials[1];
 
             // cubes
             objects.Add(Cube.GetCube(gl));
-            objects[0].Material = materials[0];
-            objects[0].Position = new Vector3(-1.9f, -0.9f, -2.5f);
-
-            objects.Add(Cube.GetCube(gl));
             objects[1].Material = materials[0];
-            objects[1].Position = new Vector3(-0.7f,-0.6f,0.6f);
+            objects[1].Position = new Vector3(-1.9f, -0.9f, -2.5f);
 
             objects.Add(Cube.GetCube(gl));
             objects[2].Material = materials[0];
-            objects[2].Position = new Vector3(0.6f, 0.6f, 0.6f);
-            objects[2].YawPitchRoll = new Vector3(0.7f, 0.4f, 0.4f);
+            objects[2].Position = new Vector3(-0.7f,-0.6f,0.6f);
+
+            objects.Add(Cube.GetCube(gl));
+            objects[3].Material = materials[0];
+            objects[3].Position = new Vector3(0.6f, 0.6f, 0.6f);
+            objects[3].YawPitchRoll = new Vector3(0.7f, 0.4f, 0.4f);
             
             //objects.Add(Cube.GetCube(gl));
             //objects[0].Position = new(-0.7f, 0.2f, -1.2f);

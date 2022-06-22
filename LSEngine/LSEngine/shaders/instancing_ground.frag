@@ -20,7 +20,6 @@ in VS_OUT {
     vec3 Normal;
     vec3 FragPos;
     vec2 TexCoords;
-	vec4 FragPosLightSpace;
 } fs_in;
 
 out vec4 outputColor;
@@ -30,8 +29,6 @@ out vec4 outputColor;
 uniform sampler2D mainTexture;
 uniform bool hasSpecularMap;
 uniform sampler2D mapSpecular;
-
-uniform sampler2D shadowMap;
 
 uniform mat4 view;
 
@@ -43,22 +40,6 @@ uniform float materialSpecExponent;
 
 // Array of lights
 uniform Light lights[5];
-
-float ShadowCalculation(vec4 fragPosLightSpace)
-{
-	// perform perspective divide
-    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    // transform to [0,1] range
-    projCoords = projCoords * 0.5 + 0.5;
-    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadowMap, projCoords.xy).r; 
-    // get depth of current fragment from light's perspective
-    float currentDepth = projCoords.z;
-    // check whether current frag pos is in shadow
-    float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
-
-    return shadow;
-}
 
 void main()
 {
@@ -130,10 +111,7 @@ void main()
 		// Attenuation
 		float distanceFactor = distance(lights[i].position, fs_in.FragPos);
 		float attenuation = 1.0 / (1.0 + (distanceFactor * lights[i].linearAttenuation) + (distanceFactor * distanceFactor * lights[i].quadraticAttenuation));
-		
-		// shadow
-		float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
-				
-		outputColor = outputColor + lightColor * attenuation * shadow;
+					
+		outputColor = outputColor + lightColor * attenuation;
 	}
 }
