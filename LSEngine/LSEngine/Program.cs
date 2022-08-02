@@ -250,9 +250,9 @@ namespace LSEngine
             {
                 ImGuiNET.ImGui.Text($"Type {light.Type}");
                 // position
-                ImGuiNET.ImGui.DragFloat($"Light{i} X position", ref lights[i].Position.X, 0.1f, -10.0f, 10.0f);
-                ImGuiNET.ImGui.DragFloat($"Light{i} Y position", ref lights[i].Position.Y, 0.1f, -10.0f, 10.0f);
-                ImGuiNET.ImGui.DragFloat($"Light{i} Z position", ref lights[i].Position.Z, 0.1f, -10.0f, 10.0f);
+                ImGuiNET.ImGui.DragFloat($"Light{i} X position", ref lights[i].position.X, 0.1f, -10.0f, 10.0f);
+                ImGuiNET.ImGui.DragFloat($"Light{i} Y position", ref lights[i].position.Y, 0.1f, -10.0f, 10.0f);
+                ImGuiNET.ImGui.DragFloat($"Light{i} Z position", ref lights[i].position.Z, 0.1f, -10.0f, 10.0f);
                 // direction
                 ImGuiNET.ImGui.DragFloat($"Light{i} X direction", ref lights[i].direction.X, 0.1f, -1.0f, 1.0f);
                 ImGuiNET.ImGui.DragFloat($"Light{i} Y direction", ref lights[i].direction.Y, 0.1f, -1.0f, 1.0f);
@@ -287,9 +287,9 @@ namespace LSEngine
             i = 0;
             foreach (var obj in objects)
             {
-                ImGuiNET.ImGui.DragFloat($"Object{i} X position", ref objects[i].Position.X, 0.1f, -10.0f, 10.0f);
-                ImGuiNET.ImGui.DragFloat($"Object{i} Y position", ref objects[i].Position.Y, 0.1f, -10.0f, 10.0f);
-                ImGuiNET.ImGui.DragFloat($"Object{i} Z position", ref objects[i].Position.Z, 0.1f, -10.0f, 10.0f);
+                ImGuiNET.ImGui.DragFloat($"Object{i} X position", ref objects[i].position.X, 0.1f, -10.0f, 10.0f);
+                ImGuiNET.ImGui.DragFloat($"Object{i} Y position", ref objects[i].position.Y, 0.1f, -10.0f, 10.0f);
+                ImGuiNET.ImGui.DragFloat($"Object{i} Z position", ref objects[i].position.Z, 0.1f, -10.0f, 10.0f);
                 // yaw pitch roll
                 ImGuiNET.ImGui.DragFloat($"Object{i} Yaw", ref objects[i].Yaw, 0.1f, -360.0f, 360.0f);
                 ImGuiNET.ImGui.DragFloat($"Object{i} Pitch", ref objects[i].Pitch, 0.1f, -360.0f, 360.0f);
@@ -461,22 +461,33 @@ namespace LSEngine
             // ground
             objects.Add(Quad.GetQuad(gl));
             objects[0].Material = materials[1];
+            objects[0].Position = new(0.0f, -5.0f, 0.0f);
 
             // cubes
             objects.Add(Cube.GetCube(gl));
             objects[1].Material = materials[0];
-            objects[1].Position = new Vector3(-1.9f, -0.9f, -2.5f);
-            objects[1].Update += (dTime) => objects[1].Roll += (float)dTime;
-                
+            objects[1].Position = new Vector3(-1.0f, 0.0f, 0.0f);
+
             objects.Add(Cube.GetCube(gl));
             objects[2].Material = materials[0];
-            objects[2].Position = new Vector3(-0.7f,-0.6f,0.6f);
+            objects[2].Position = new Vector3(1.0f, 0.0f, 0.0f);
 
             objects.Add(Cube.GetCube(gl));
             objects[3].Material = materials[0];
-            objects[3].Position = new Vector3(0.6f, 0.6f, 0.6f);
-            objects[3].YawPitchRoll = new Vector3(0.7f, 0.4f, 0.4f);
-            
+            objects[3].Position = new Vector3(0.0f, -1.0f, 0.0f);
+
+            objects.Add(Cube.GetCube(gl));
+            objects[4].Material = materials[0];
+            objects[4].Position = new Vector3(0.0f, 1.0f, 0.0f);
+
+            objects.Add(Cube.GetCube(gl));
+            objects[5].Material = materials[0];
+            objects[5].Position = new Vector3(0.0f, 0.0f, -1.0f);
+
+            objects.Add(Cube.GetCube(gl));
+            objects[6].Material = materials[0];
+            objects[6].Position = new Vector3(0.0f, 0.0f, 1.0f);
+
             //objects.Add(Cube.GetCube(gl));
             //objects[0].Position = new(-0.7f, 0.2f, -1.2f);
             //objects[0].Material = materials[0];
@@ -492,34 +503,34 @@ namespace LSEngine
 
             //// Lights
             ////spotlight
-            //lights.Add(Light.GetLight(gl, Light.LightType.SpotLightCube));
-            //lights[0].Position = new(0.7f, 0.0f, -1.2f);
-            //lights[0].Direction = new(1.0f, 0.0f, 0.0f);
-            //lights[0].Color = new(0.0f, 0.0f, 1.0f);
-            //lights[0].AmbientIntensity = 0.7f;
-            //lights[0].DiffuseIntensity = 1.0f;
-            //lights[0].ConeAngle = 20.0f;
-            //lights[0].LinearAttenuation = 0.10f;
-            //lights[0].QuadraticAttenuation = 0.02f;
+            lights.Add(Light.GetLight(gl, Light.LightType.SpotLightCube));
+            lights[0].Position = new(0.0f, 0.0f, 0.0f);
+            lights[0].Direction = new(1.0f, 0.0f, 0.0f);
+            lights[0].Color = new(0.0f, 0.0f, 1.0f);
+            lights[0].AmbientIntensity = 0.7f;
+            lights[0].DiffuseIntensity = 1.0f;
+            lights[0].ConeAngle = 20.0f;
+            lights[0].LinearAttenuation = 0.10f;
+            lights[0].QuadraticAttenuation = 0.02f;
             // directional
             lights.Add(Light.GetLight(gl, Light.LightType.DirectionalCube));
-            lights[0].Position = new(10.0f, 10.0f, 10.0f);
-            lights[0].Direction = new(1.0f, 1.0f, 1.0f);
-            lights[0].Color = new(1.0f, 1.0f, 1.0f);
-            lights[0].AmbientIntensity = 0.21f;
-            lights[0].DiffuseIntensity = 1.0f;
-            lights[0].orthoWidth = _windowWidth;
-            lights[0].orthoHeight = _windowHeight;
-            lights[0].orthoNear = 0.1f;
-            lights[0].orthoFar = 1000.0f;
+            lights[1].Position = new(10.0f, 10.0f, 10.0f);
+            lights[1].Direction = new(1.0f, 1.0f, 1.0f);
+            lights[1].Color = new(1.0f, 1.0f, 1.0f);
+            lights[1].AmbientIntensity = 0.21f;
+            lights[1].DiffuseIntensity = 1.0f;
+            lights[1].orthoWidth = _windowWidth;
+            lights[1].orthoHeight = _windowHeight;
+            lights[1].orthoNear = 0.1f;
+            lights[1].orthoFar = 1000.0f;
             //// point
-            //lights.Add(Light.GetLight(gl, Light.LightType.PointLightCube));
-            //lights[2].Position = new(-1.0f, 0.9f, -0.5f);
-            //lights[2].Color = new(1.0f, 0.0f, 0.0f);
-            //lights[2].AmbientIntensity = 0.02f;
-            //lights[2].DiffuseIntensity = 1.0f;
-            //lights[2].LinearAttenuation = 1.0f;
-            //lights[2].QuadraticAttenuation = 1.0f;
+            lights.Add(Light.GetLight(gl, Light.LightType.PointLightCube));
+            lights[2].Position = new(-1.0f, 0.9f, -0.5f);
+            lights[2].Color = new(1.0f, 0.0f, 0.0f);
+            lights[2].AmbientIntensity = 0.02f;
+            lights[2].DiffuseIntensity = 1.0f;
+            lights[2].LinearAttenuation = 1.0f;
+            lights[2].QuadraticAttenuation = 1.0f;
 
 
         }
